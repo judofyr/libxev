@@ -376,7 +376,8 @@ pub const Loop = struct {
                 assert(self.timers.deleteMin().? == t);
 
                 // Mark completion as done
-                const c = t.c;
+                const op: *Operation = @fieldParentPtr("timer", t);
+                const c: *Completion = @fieldParentPtr("op", op);
                 c.flags.state = .dead;
 
                 // We mark it as inactive here because if we rearm below
@@ -801,10 +802,6 @@ pub const Loop = struct {
             },
 
             .timer => |*v| action: {
-                // Point back to completion since we need this. In the future
-                // we want to use @fieldParentPtr but https://github.com/ziglang/zig/issues/6611
-                v.c = c;
-
                 // Insert the timer into our heap.
                 self.timers.insert(v);
 
@@ -1675,11 +1672,6 @@ const Timer = struct {
 
     /// Internal heap fields.
     heap: heap.IntrusiveField(Timer) = .{},
-
-    /// We point back to completion for now. When issue[1] is fixed,
-    /// we can juse use that from our heap fields.
-    /// [1]: https://github.com/ziglang/zig/issues/6611
-    c: *Completion = undefined,
 
     fn less(_: void, a: *const Timer, b: *const Timer) bool {
         return a.ns() < b.ns();
